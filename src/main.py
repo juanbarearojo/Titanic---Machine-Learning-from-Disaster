@@ -5,16 +5,9 @@
 """
 
 import pandas as pd
-import numpy as np
-from sklearn.preprocessing import LabelEncoder
 from sklearn.impute import KNNImputer
-from sklearn.impute import SimpleImputer
 import xgboost as xgb
-import matplotlib 
-import scipy as sp
-import random
-import time
-import warnings
+
 
 def concat_df(train_data, test_data):
     # Returns a concatenated df of training and test set
@@ -122,7 +115,8 @@ df_test = df_test.drop(Variables_eliminar_test, axis = 1)
 
 y = df_train["Survived"]
 df_train = df_train.drop("Survived", axis = 1)
-model_xgb = xgb.XGBClassifier( max_depth=5, min_child_weight=1.7817, n_estimators=3000)
+model_xgb = xgb.XGBClassifier( n_estimators= 2000, max_depth= 4, min_child_weight= 2,gamma=0.9,                        
+                        subsample=0.8,colsample_bytree=0.8,objective= 'binary:logistic',nthread= -1,scale_pos_weight=1)
 
 
 model_xgb.fit(df_train, y)
