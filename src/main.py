@@ -124,8 +124,7 @@ y = df_train["Survived"]
 df_train = df_train.drop("Survived", axis = 1)
 model_xgb = xgb.XGBClassifier( max_depth=5, min_child_weight=1.7817, n_estimators=3000)
 
-print(df_train)
-print(df_test)
+
 model_xgb.fit(df_train, y)
 predictions = model_xgb.predict(df_test)
 
