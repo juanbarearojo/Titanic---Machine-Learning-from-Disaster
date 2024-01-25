@@ -83,48 +83,53 @@ En esta porción del código en vamos a hcer un encodeao de forma manual en vez 
 el objetivo de obtener mejores resultados.
 '''
 
-'''
-#quitamos las columna id pero la guardamos para luego
-
-if 'PassengerId' in df_train:
-    df_train.drop('PassengerId', axis=1, inplace=True)
+for dataset in full_data:
+    # Mapping Sex
+    dataset['Sex'] = dataset['Sex'].map( {'female': 0, 'male': 1} ).astype(int)
     
-test_sin_id = df_test.drop('PassengerId', axis=1)
+    # Mapping Embarked
+    dataset['Embarked'] = dataset['Embarked'].map( {'S': 0, 'C': 1, 'Q': 2} ).astype(int)
+    
+    # Mapping Fare
+    dataset.loc[ dataset['Fare'] <= 7.91, 'Fare'] 						        = 0
+    dataset.loc[(dataset['Fare'] > 7.91) & (dataset['Fare'] <= 14.454), 'Fare'] = 1
+    dataset.loc[(dataset['Fare'] > 14.454) & (dataset['Fare'] <= 31), 'Fare']   = 2
+    dataset.loc[ dataset['Fare'] > 31, 'Fare'] 							        = 3
+    dataset['Fare'] = dataset['Fare'].astype(int)
+    
+    # Mapping Age
+    dataset.loc[ dataset['Age'] <= 16, 'Age'] 					       = 0
+    dataset.loc[(dataset['Age'] > 16.336) & (dataset['Age'] <= 32.252), 'Age'] = 1
+    dataset.loc[(dataset['Age'] > 32.252) & (dataset['Age'] <= 48.168), 'Age'] = 2
+    dataset.loc[(dataset['Age'] > 48.168) & (dataset['Age'] <= 64.084), 'Age'] = 3
+    dataset.loc[ dataset['Age'] > 64.084, 'Age'] = 4 ;
+
+'''
+ELIMINAMOS AQUELLAS CARACTERISTICAS QUE NOS APAORTAN NADA DE INTERÉS 
+PassengerId -> por lo general lo id no aportan nada útil a la hora de modelo solo hacer que sea menos interpretable
+Ticket -> No parece haber un patrón aparente al respecto
+Cabin -> Poca infromación al respecto gran cantidad de valors peridos
+Sibsp -> ya tenemos family size
+CAtegorical Age/Fare -> las queriamos para los intervalos -> ya no son necesarias
+'''
+Variables_eliminar_train = ['PassengerId','Ticket','Cabin','SibSp','CategoricalFare','CategoricalAge','Name']
+Variables_eliminar_test = ['PassengerId','Ticket','Cabin','SibSp','Name']
+df_train = df_train.drop(Variables_eliminar_train, axis = 1)
+df_test = df_test.drop(Variables_eliminar_test, axis = 1)
 
 
-
-train_emb = df_train.fillna({"Embarked": "S"})
-
-
-#al total le quitamos el id y el survived para gacer el imputer
-df_all_sin_id_surv = df_all.drop('PassengerId',axis = 1)
-df_all_sin_id_surv = df_all_sin_id_surv.drop('Survived', axis=1)
-
-#columnas con varoles numericos
-col_num = list(df_all_sin_id_surv.select_dtypes(include=np.number).columns)
-
-print(df_all_sin_id_surv)
-#Usamos dos KNNImputer distintos porque el test 
-imputer_num = KNNImputer(n_neighbors=15)
-imputer_num.fit(df_all_sin_id_surv[col_num])
-train_emb[col_num] = imputer_num.transform(df_train[col_num])
-test_sin_id[col_num] = imputer_num.transform(test_sin_id[col_num])
 
 
 y = df_train["Survived"]
-
-features = ["Pclass", "Sex", "SibSp", "Parch","Age","Fare","Embarked"]
-X = pd.get_dummies(train_emb[features])
-X_test = pd.get_dummies(test_sin_id[features])
-
-
+df_train = df_train.drop("Survived", axis = 1)
 model_xgb = xgb.XGBClassifier( max_depth=5, min_child_weight=1.7817, n_estimators=3000)
 
-model_xgb.fit(X, y)
-predictions = model_xgb.predict(X_test)
+print(df_train)
+print(df_test)
+model_xgb.fit(df_train, y)
+predictions = model_xgb.predict(df_test)
 
-output = pd.DataFrame({'PassengerId': df_test.PassengerId, 'Survived': predictions})
+output = pd.DataFrame({'PassengerId': PassengerId, 'Survived': predictions})
 output.to_csv('../data/submission.csv', index=False)
 print("Resultados en Submission.csv")
 
-'''
