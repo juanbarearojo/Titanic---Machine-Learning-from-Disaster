@@ -3,11 +3,21 @@
 """
 @author: barearojo
 """
-
+import numpy as np
 import pandas as pd
 from sklearn.impute import KNNImputer
 import xgboost as xgb
+from ensemble import SklearnHelper
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC
+from sklearn.ensemble import GradientBoostingClassifier
 
+
+
+
+
+SEED = 95
 
 def concat_df(train_data, test_data):
     # Returns a concatenated df of training and test set
@@ -111,16 +121,81 @@ df_train = df_train.drop(Variables_eliminar_train, axis = 1)
 df_test = df_test.drop(Variables_eliminar_test, axis = 1)
 
 
+'''
+CREAMOS LOS CLASIFICADORES QEU VAMOS A USAR
+'''
+# Put in our parameters for said classifiers
+# Random Forest parametros
+rf_params = {
+    'n_jobs': -1,
+    'n_estimators': 500,
+     'warm_start': True, 
+     #'max_features': 0.2,
+    'max_depth': 6,
+    'min_samples_leaf': 2,
+    'max_features' : 'sqrt',
+    'verbose': 0
+}
 
 
-y = df_train["Survived"]
-df_train = df_train.drop("Survived", axis = 1)
-model_xgb = xgb.XGBClassifier( n_estimators= 2000, max_depth= 4, min_child_weight= 2,gamma=0.9,                        
+# AdaBoost parametros
+ada_params = {
+    'n_estimators': 500,
+    'learning_rate' : 0.75
+}
+
+# Gradient Boosting parametros
+gb_params = {
+    'n_estimators': 500,
+    'max_depth': 5,
+    'min_samples_leaf': 2,
+    'verbose': 0
+}
+# Support Vector Classifier parametros 
+svc_params = {
+    'kernel' : 'linear',
+    'C' : 0.025
+    }
+
+
+'''
+Creación de matrices NumPy a partir de los conjuntos de entrenamiento y prueba:
+ Aquí, se está preparando los datos para el entrenamiento y la prueba. y_train recibe la columna 'Survived' 
+ de los datos de entrenamiento, aplanada en un array unidimensional usando ravel().
+ Luego, la columna 'Survived' se elimina de los datos de entrenamiento, y las características restantes 
+ se almacenan en x_train como una matriz NumPy. De manera similar, x_test se crea como una matriz
+ NumPy a partir de los datos de prueba.   
+ '''
+# Crear matrices NumPy de los conjuntos de entrenamiento, prueba y destino (Survived) para alimentar a nuestros modelos
+y_train = df_train['Survived'].ravel()
+df_train = df_train.drop(['Survived'], axis=1)
+x_train = df_train.values  # Crea una matriz de los datos de entrenamiento
+x_test = df_test.values    # Crea una matriz de los datos de prueba
+
+
+#Definimos objetos de la clase creada con anterioridad para
+rf = SklearnHelper(clf=RandomForestClassifier, train=df_train, test=df_test, params=rf_params)
+ada = SklearnHelper(clf=AdaBoostClassifier,  train=df_train, test=df_test, params=ada_params)
+gb = SklearnHelper(clf=GradientBoostingClassifier,  train=df_train, test=df_test,params=gb_params)
+svc = SklearnHelper(clf=SVC,  train=df_train, test=df_test, params=svc_params)
+
+# Crear nuestras predicciones OOF de entrenamiento y prueba. Estos resultados base se usarán como nuevas características
+rf_oof_train, rf_oof_test = rf.get_oof(x_train, y_train, x_test) # Random Forest
+ada_oof_train, ada_oof_test = ada.get_oof(x_train, y_train, x_test)# AdaBoost 
+gb_oof_train, gb_oof_test = gb.get_oof(x_train, y_train, x_test) # Gradient Boost
+svc_oof_train, svc_oof_test = svc.get_oof(x_train, y_train, x_test)  # Support Vector Classifier
+
+#concatenamos todos los reusltados de los oof que usamos para entrenar nuestro XGBOOST
+x_train = np.concatenate(( rf_oof_train, ada_oof_train, gb_oof_train, svc_oof_train), axis=1)
+x_test = np.concatenate((rf_oof_test, ada_oof_test, gb_oof_test, svc_oof_test), axis=1)
+
+
+model_xgb = xgb.XGBClassifier( n_estimators= 3000, max_depth= 4, min_child_weight= 2,gamma=0.9,                        
                         subsample=0.8,colsample_bytree=0.8,objective= 'binary:logistic',nthread= -1,scale_pos_weight=1)
 
 
-model_xgb.fit(df_train, y)
-predictions = model_xgb.predict(df_test)
+model_xgb.fit(x_train, y_train)
+predictions = model_xgb.predict(x_test)
 
 output = pd.DataFrame({'PassengerId': PassengerId, 'Survived': predictions})
 output.to_csv('../data/submission.csv', index=False)
