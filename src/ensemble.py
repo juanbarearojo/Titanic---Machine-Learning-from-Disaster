@@ -38,6 +38,15 @@ class SklearnHelper:
     def feature_importances(self, x, y):
         print(self.clf.feature_importances_)
         
+        
+    '''
+
+    La función get_oof en la clase SklearnHelper realiza validación cruzada utilizando KFold.
+    Entrena el clasificador en subconjuntos del conjunto de entrenamiento y predice sobre instancias no vistas,
+    generando predicciones "out-of-fold" para el conjunto de entrenamiento y promediando las predicciones
+    sobre todos los pliegues para el conjunto de prueba. Esto ayuda a evaluar el rendimiento del modelo y 
+    evitar el sobreajuste.
+    '''
     def get_oof(self, x_train, y_train, x_test):
         oof_train = np.zeros((self.ntrain,))
         oof_test = np.zeros((self.ntest,))
