@@ -4,8 +4,14 @@
 
 @author: barearojo
 
-Esta clase en Python está diseñada para extender los clasificadores de la biblioteca scikit-learn (Sklearn)
-
+La clase SklearnHelper es una extensión para clasificadores de Scikit-Learn,
+ diseñada para facilitar el proceso de entrenamiento, predicción y evaluación de modelos.
+ El constructor inicializa parámetros esenciales, como el número de pliegues para la validación
+ cruzada y la semilla para reproducibilidad. La clase incluye métodos para entrenar el clasificador,
+ realizar predicciones, y obtener las importancias de las características. Es especialmente útil para
+ implementar la técnica "out-of-fold" en la validación cruzada, donde se entrena el modelo en subconjuntos
+ del conjunto de entrenamiento y se evalúa en conjuntos no vistos, proporcionando así predicciones fuera del pliegue.
+ Este enfoque contribuye a una evaluación más robusta del modelo y ayuda a evitar el sobreajuste.
 """
 
 from sklearn.model_selection import KFold
